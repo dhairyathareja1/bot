@@ -1,0 +1,16 @@
+FROM node:8.10.0
+
+ENV DEBIAN_FRONTEND="noninteractive"
+
+ENV HUBOT_NAME="bot"
+ENV HUBOT_OWNER="Mobile Development Group <mdg@iitr.ac.in>"
+ENV HUBOT_DESCRIPTION="Local Development Bot"
+
+ENV PORT="8080"
+
+RUN useradd hubot -m
+
+USER hubot
+WORKDIR /home/hubot
+
+CMD npm install && ./bin/hubot -n $HUBOT_NAME -a shell

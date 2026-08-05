@@ -1,0 +1,27 @@
+services:
+  redis:
+    image: redis
+    volumes:
+      - ./data/redis:/data
+
+  bot:
+    container_name: mdg-bot-local
+
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+
+    ports:
+      - "9998:8080"
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./:/home/hubot
+
+    stdin_open: true
+    tty: true
+
+    depends_on:
+      - redis

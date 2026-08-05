@@ -5,3 +5,10 @@ node_modules
 data
 .idea
 package-lock.json
+.npm/
+.node-gyp/
+.log
+data/
+.config/
+.bash_history
+.DS_Store
