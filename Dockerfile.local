@@ -13,4 +13,4 @@ RUN useradd hubot -m
 USER hubot
 WORKDIR /home/hubot
 
-CMD npm install && ./bin/hubot -n $HUBOT_NAME -a shell
+CMD npm run build && ./bin/hubot -n $HUBOT_NAME -a shell
