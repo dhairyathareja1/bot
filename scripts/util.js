@@ -1,11 +1,5 @@
-// Shared helpers used by several scripts (some still CoffeeScript, e.g.
-// info.coffee, leaderboard.coffee, httpd.coffee — not yet migrated).
-//
-// IMPORTANT: keep exports as `exports.info` / `exports.graph` (not a default
-// export). Those still-CoffeeScript scripts call `require('./util').info(...)`
-// and `require('./util').graph(...)` directly — changing this to ES module
-// syntax breaks them even though they're never re-compiled themselves.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// used by info.coffee, leaderboard.coffee, httpd.coffee
+// keep exports.graph and exports.info syntax to prevent error since many other files use this in this form
 const https = require("follow-redirects").https;
 // Get the user details
 exports.info = (callback) => {

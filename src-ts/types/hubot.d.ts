@@ -22,6 +22,7 @@ declare module "hubot" {
     send(...strings: any[]): void;
     reply(...strings: any[]): void;
     random<T>(items: T[]): T;
+    http(url: string): any;
   }
 
   export interface Brain {
