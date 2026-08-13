@@ -23,6 +23,7 @@ declare module "hubot" {
     reply(...strings: any[]): void;
     random<T>(items: T[]): T;
     http(url: string): any;
+    robot: Robot;
   }
 
   export interface Brain {
@@ -41,6 +42,7 @@ declare module "hubot" {
     error(...args: any[]): void;
     warning(...args: any[]): void;
     info(...args: any[]): void;
+    debug(...args: any[]): void;
   }
 
   export interface Robot {
