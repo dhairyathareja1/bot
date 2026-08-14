@@ -11,9 +11,6 @@
 //
 // Commands:
 //   random quote
-//
-// Author:
-//   csoni111
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const select = require("soupselect").select;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
