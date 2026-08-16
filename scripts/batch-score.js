@@ -56,7 +56,12 @@ function parse(json) {
     for (const line of json.toString().split("\n")) {
         result.push(line.split(",").map((s) => s.trim()));
     }
-    return result.length ? result : false;
+    /* BUGFIX: see info.ts — original always returned the array, never `false`,
+     due to a dead `else false` branch in the source CoffeeScript. Lower
+     practical impact here since this parse() never filters by query (so an
+     empty result was already rare), but fixed for consistency with the
+     other four files sharing this exact helper pattern.*/
+    return result;
 }
 function member(members, year, callback) {
     const userName = [];

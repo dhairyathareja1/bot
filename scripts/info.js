@@ -20,7 +20,14 @@ function parse(json, query) {
             result.push(line.split(",").map((s) => s.trim()));
         }
     }
-    return result.length ? result : false;
+    /* BUGFIX: original CoffeeScript was `if result != "" then result else false`.
+     `result` is always an array, never `!=`-equal to a string in a way that
+     resolves false, so that comparison was always true — the `else false`
+     branch never ran. parse() always returned the array (even empty), never
+     `false`, which made the `if (!result)` "not found" message below
+     unreachable. Fixed here so an empty match set now correctly reports
+     "no user found" instead of silently sending zero attachments. */
+    return result;
 }
 function randomColor() {
     return "#" + (0x1000000 + Math.random() * 0xffffff).toString(16).slice(1, 7);

@@ -21,7 +21,11 @@ function parse(json, query) {
             result.push(line.split(",").map((s) => s.trim()));
         }
     }
-    return result.length ? result : false;
+    /* BUGFIX: see info.ts — original always returned the array, never `false`,
+     due to a dead `else false` branch in the source CoffeeScript. Fixed so
+     the "not found" message and the cron job's early-return both actually
+     trigger on an empty result instead of being unreachable.*/
+    return result;
 }
 module.exports = (robot) => {
     robot.respond(/(birthday) (.+)$/i, (msg) => {
