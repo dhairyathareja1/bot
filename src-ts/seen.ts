@@ -7,18 +7,15 @@
 //
 // Configuration:
 //   HUBOT_SEEN_TIMEAGO - If set to `false` (defaults to `true`), last seen times will be absolute dates instead of relative
-//
-// Author:
-//   wiredfool, patcon@gittip
 
-import { Robot, Response } from 'hubot';
+import { Robot, Response } from "hubot";
 
 const config = {
-  use_timeago: process.env.HUBOT_SEEN_TIMEAGO !== 'false',
+  use_timeago: process.env.HUBOT_SEEN_TIMEAGO !== "false",
 };
 
 function clean(thing: string | undefined): string {
-  return (thing || '').toLowerCase().trim();
+  return (thing || "").toLowerCase().trim();
 }
 
 function isPm(msg: Response): boolean {
@@ -58,7 +55,7 @@ class Seen {
     this.robot = robot;
     this.cache = {};
 
-    this.robot.brain.on('loaded', () => {
+    this.robot.brain.on("loaded", () => {
       this.cache = this.robot.brain.data.seen || {};
     });
   }
@@ -100,14 +97,18 @@ export = (robot: Robot): void => {
   // Keep track of last msg heard
   robot.hear(/.*/, (msg) => {
     if (!isPm(msg)) {
-      seen.add(ircname(msg) as string, ircchan(msg) as string, msg.message.text as string);
+      seen.add(
+        ircname(msg) as string,
+        ircchan(msg) as string,
+        msg.message.text as string,
+      );
     }
   });
 
   robot.respond(/seen @?([-\w.\\^|{}`\[\]]+):? ?(.*)/, (msg) => {
-    if (msg.match[1] === 'in' && msg.match[2] === 'last 24h') {
+    if (msg.match[1] === "in" && msg.match[2] === "last 24h") {
       const users = seen.usersSince(24);
-      msg.send(`Active in ${msg.match[2]}: ${users.join(', ')}`);
+      msg.send(`Active in ${msg.match[2]}: ${users.join(", ")}`);
     } else {
       robot.logger.debug(`seen check ${clean(msg.match[1])}`);
       const nick = msg.match[1];
@@ -116,7 +117,7 @@ export = (robot: Robot): void => {
         let dateString: string;
         if (config.use_timeago) {
           // eslint-disable-next-line @typescript-eslint/no-var-requires
-          const timeago = require('node-time-ago');
+          const timeago = require("node-time-ago");
           dateString = timeago(new Date(last.date));
         } else {
           dateString = `at ${new Date(last.date)}`;

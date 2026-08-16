@@ -7,9 +7,6 @@
 //   hubot skip word
 //   hubot unskip word
 //   hubot show skipped
-//
-// Author:
-//   aman-singh7
 module.exports = (robot) => {
     // returns list of skipped words
     const skippedlist = () => {

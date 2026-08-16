@@ -6,9 +6,6 @@
 //   hubot skip word
 //   hubot unskip word
 //   hubot show skipped
-//
-// Author:
-//   aman-singh7
 
 import { Robot } from "hubot";
 

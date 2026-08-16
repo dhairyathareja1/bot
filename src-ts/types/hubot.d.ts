@@ -36,6 +36,7 @@ declare module "hubot" {
     userForId(id: string): User;
     userForName(name: string): User | null;
     usersForFuzzyName(name: string): User[];
+    on(event: string, callback: (...args: any[]) => void): void;
   }
 
   export interface Logger {
@@ -48,6 +49,8 @@ declare module "hubot" {
   export interface Robot {
     name: string;
     adapterName: string;
+    version: string;
+    alias?: string;
     brain: Brain;
     logger: Logger;
     respond(regex: RegExp, callback: (msg: Response) => void): void;
@@ -56,5 +59,21 @@ declare module "hubot" {
     emit(event: string, ...args: any[]): void;
     send(envelope: any, ...strings: any[]): void;
     http(url: string): any;
+    helpCommands(): string[];
+    router: any;
+    receiveMiddleware(
+      callback: (
+        context: any,
+        next: (done: () => void) => void,
+        done: () => void,
+      ) => void,
+    ): void;
+    listenerMiddleware(
+      callback: (
+        context: any,
+        next: (done: () => void) => void,
+        done: () => void,
+      ) => void,
+    ): void;
   }
 }

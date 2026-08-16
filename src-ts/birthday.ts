@@ -16,7 +16,7 @@ const cron = require("node-cron");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const util = require("./util");
 
-function parse(json: string, query: string): string[][] | false {
+function parse(json: string, query: string): string[][] {
   const result: string[][] = [];
   for (const line of json.toString().split("\n")) {
     const y = line.toLowerCase().indexOf(query);
@@ -24,7 +24,11 @@ function parse(json: string, query: string): string[][] | false {
       result.push(line.split(",").map((s) => s.trim()));
     }
   }
-  return result.length ? result : false;
+  /* BUGFIX: see info.ts — original always returned the array, never `false`,
+   due to a dead `else false` branch in the source CoffeeScript. Fixed so
+   the "not found" message and the cron job's early-return both actually
+   trigger on an empty result instead of being unreachable.*/
+  return result;
 }
 
 export = (robot: Robot): void => {

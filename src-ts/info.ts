@@ -15,7 +15,7 @@ const moment = require("moment");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const util = require("./util");
 
-function parse(json: string, query: string): string[][] | false {
+function parse(json: string, query: string): string[][] {
   const result: string[][] = [];
   for (const line of json.toString().split("\n")) {
     const y = line.toLowerCase().indexOf(query);
@@ -23,7 +23,14 @@ function parse(json: string, query: string): string[][] | false {
       result.push(line.split(",").map((s) => s.trim()));
     }
   }
-  return result.length ? result : false;
+  /* BUGFIX: original CoffeeScript was `if result != "" then result else false`.
+   `result` is always an array, never `!=`-equal to a string in a way that
+   resolves false, so that comparison was always true — the `else false`
+   branch never ran. parse() always returned the array (even empty), never
+   `false`, which made the `if (!result)` "not found" message below
+   unreachable. Fixed here so an empty match set now correctly reports
+   "no user found" instead of silently sending zero attachments. */
+  return result;
 }
 
 function randomColor(): string {

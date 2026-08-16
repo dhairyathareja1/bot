@@ -9,9 +9,6 @@
 //
 // Commands:
 //   hubot who all in lab
-//
-// Author:
-//   csoni111
 
 import { Robot } from "hubot";
 

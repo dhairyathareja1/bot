@@ -9,24 +9,26 @@
 //
 // Commands:
 //   None
-//
-// Author:
-//   csoni111
 
-import { Robot } from 'hubot';
+import { Robot } from "hubot";
 
-const setTime = parseFloat(process.env.IDLE_TIME_DURATION_HOURS || '0');
+const setTime = parseFloat(process.env.IDLE_TIME_DURATION_HOURS || "0");
 let i: ReturnType<typeof setInterval> | 0 = 0;
 const msecPerHour = 1000 * 60 * 60;
 let lastMsgTime: Date | null = null;
 // Preserved from the original — defined but never referenced there either.
-const idleMsgs = ['Why so silent?', 'Is anyone alive :expressionless:', 'Looks like I am all alone!'];
+const idleMsgs = [
+  "Why so silent?",
+  "Is anyone alive :expressionless:",
+  "Looks like I am all alone!",
+];
 
 export = (robot: Robot): void => {
   const checkAndSendMsg = (): void => {
-    const idleTimeHour = (new Date().getTime() - (lastMsgTime as Date).getTime()) / msecPerHour;
+    const idleTimeHour =
+      (new Date().getTime() - (lastMsgTime as Date).getTime()) / msecPerHour;
     if (idleTimeHour > setTime) {
-      robot.emit('send:fb-feed', 'dardanaak');
+      robot.emit("send:fb-feed", "dardanaak");
     }
   };
 

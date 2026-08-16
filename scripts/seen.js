@@ -8,14 +8,11 @@
 //
 // Configuration:
 //   HUBOT_SEEN_TIMEAGO - If set to `false` (defaults to `true`), last seen times will be absolute dates instead of relative
-//
-// Author:
-//   wiredfool, patcon@gittip
 const config = {
-    use_timeago: process.env.HUBOT_SEEN_TIMEAGO !== 'false',
+    use_timeago: process.env.HUBOT_SEEN_TIMEAGO !== "false",
 };
 function clean(thing) {
-    return (thing || '').toLowerCase().trim();
+    return (thing || "").toLowerCase().trim();
 }
 function isPm(msg) {
     try {
@@ -49,7 +46,7 @@ class Seen {
         };
         this.robot = robot;
         this.cache = {};
-        this.robot.brain.on('loaded', () => {
+        this.robot.brain.on("loaded", () => {
             this.cache = this.robot.brain.data.seen || {};
         });
     }
@@ -85,9 +82,9 @@ module.exports = (robot) => {
         }
     });
     robot.respond(/seen @?([-\w.\\^|{}`\[\]]+):? ?(.*)/, (msg) => {
-        if (msg.match[1] === 'in' && msg.match[2] === 'last 24h') {
+        if (msg.match[1] === "in" && msg.match[2] === "last 24h") {
             const users = seen.usersSince(24);
-            msg.send(`Active in ${msg.match[2]}: ${users.join(', ')}`);
+            msg.send(`Active in ${msg.match[2]}: ${users.join(", ")}`);
         }
         else {
             robot.logger.debug(`seen check ${clean(msg.match[1])}`);
@@ -97,7 +94,7 @@ module.exports = (robot) => {
                 let dateString;
                 if (config.use_timeago) {
                     // eslint-disable-next-line @typescript-eslint/no-var-requires
-                    const timeago = require('node-time-ago');
+                    const timeago = require("node-time-ago");
                     dateString = timeago(new Date(last.date));
                 }
                 else {

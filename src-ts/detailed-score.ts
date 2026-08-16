@@ -110,11 +110,12 @@ export = (robot: Robot): void => {
           minus.push(p.minus);
         });
 
-        // Note: `options` is nested inside `data` here, matching the original
-        // CoffeeScript's actual (unusual) object structure exactly — not the
-        // top-level-sibling shape Chart.js configs normally use. Preserved
-        // as-is rather than "corrected," per the no-behavior-change rule for
-        // this migration pass.
+        /* BUGFIX: original CoffeeScript nested `options` inside `data`
+         instead of as a sibling of it. Chart.js (and QuickChart, which
+         renders this via util.graph) reads `options` from the top level of
+         the config — nested inside `data` it was silently ignored, so the
+         chart title and the datalabels styling never actually applied.
+         Fixed by moving `options` up to be a sibling of `type`/`data`.*/
         const graph = {
           type: "bar",
           data: {
@@ -135,19 +136,19 @@ export = (robot: Robot): void => {
                 data: minus,
               },
             ],
-            options: {
-              title: {
-                display: true,
-                text: `Detailed Score of ${name}`,
-              },
-              plugins: {
-                datalabels: {
-                  anchor: "center",
-                  align: "center",
-                  color: "#666",
-                  font: {
-                    weight: "normal",
-                  },
+          },
+          options: {
+            title: {
+              display: true,
+              text: `Detailed Score of ${name}`,
+            },
+            plugins: {
+              datalabels: {
+                anchor: "center",
+                align: "center",
+                color: "#666",
+                font: {
+                  weight: "normal",
                 },
               },
             },

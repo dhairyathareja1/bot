@@ -171,10 +171,13 @@ export = (robot: Robot): void => {
   robot.respond(/(who|who all) (has|have) (the key|key|keys|a key)/i, (msg) => {
     try {
       const kh = key();
-      // Original CoffeeScript compares `kh is []` — a fresh array literal is
-      // never reference-equal to anything, so this branch is always false in
-      // the source too. Preserved as dead code rather than "fixed."
-      if (false) {
+      /* BUGFIX: original CoffeeScript compared `kh is []` — a fresh array
+       literal is never reference-equal to anything, so that branch was
+       always false and this dead-code path never ran (the `msgText === ""`
+       check further down happened to catch the empty case anyway, so this
+       was inert rather than user-visible, but it's fixed here to do what
+       it clearly was meant to do).*/
+      if (kh.length === 0) {
         msg.send(
           "Ah! Nobody informed me about the keys. Don't hold me responsible for this :expressionless:",
         );

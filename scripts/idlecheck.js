@@ -10,20 +10,21 @@
 //
 // Commands:
 //   None
-//
-// Author:
-//   csoni111
-const setTime = parseFloat(process.env.IDLE_TIME_DURATION_HOURS || '0');
+const setTime = parseFloat(process.env.IDLE_TIME_DURATION_HOURS || "0");
 let i = 0;
 const msecPerHour = 1000 * 60 * 60;
 let lastMsgTime = null;
 // Preserved from the original — defined but never referenced there either.
-const idleMsgs = ['Why so silent?', 'Is anyone alive :expressionless:', 'Looks like I am all alone!'];
+const idleMsgs = [
+    "Why so silent?",
+    "Is anyone alive :expressionless:",
+    "Looks like I am all alone!",
+];
 module.exports = (robot) => {
     const checkAndSendMsg = () => {
         const idleTimeHour = (new Date().getTime() - lastMsgTime.getTime()) / msecPerHour;
         if (idleTimeHour > setTime) {
-            robot.emit('send:fb-feed', 'dardanaak');
+            robot.emit("send:fb-feed", "dardanaak");
         }
     };
     if (setTime > 0) {

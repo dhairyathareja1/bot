@@ -10,9 +10,6 @@
 //
 // Commands:
 //   hubot who all in lab
-//
-// Author:
-//   csoni111
 module.exports = (robot) => {
     robot.respond(/who.*lab/i, (msg) => {
         const wailUrl = `${process.env.WAIL_PIC_URL}?t=${new Date().getTime()}`;
