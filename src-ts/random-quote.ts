@@ -13,10 +13,8 @@
 
 import { Robot } from "hubot";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const select = require("soupselect").select;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const htmlparser = require("htmlparser");
+import { select } from "soupselect";
+import * as htmlparser from "htmlparser";
 
 type QuoteCallback = (
   success: boolean,
@@ -28,7 +26,7 @@ export = (robot: Robot): void => {
   const fetchRandomQuote = (callback: QuoteCallback): void => {
     robot.http("http://inspirationalshit.com/endlessquotesrotator.php").get()(
       (err, res, body) => {
-        if (err) {
+        if (err || !res || body == null) {
           callback(false);
           return;
         }
@@ -38,17 +36,18 @@ export = (robot: Robot): void => {
         }
 
         const handler = new htmlparser.DefaultHandler(
-          (err2: Error, dom: any) => {
+          (err2, dom) => {
             if (err2) {
               callback(false);
             } else {
-              const quote = select(dom, "blockquote p");
-              const author = select(dom, "blockquote footer cite");
-              callback(
-                true,
-                quote[0].children[0].raw,
-                author[0].children[0].raw,
-              );
+              const quote = select(dom, "blockquote p")[0]?.children?.[0]?.raw;
+              const author = select(dom, "blockquote footer cite")[0]
+                ?.children?.[0]?.raw;
+              if (quote && author) {
+                callback(true, quote, author);
+              } else {
+                callback(false);
+              }
             }
           },
         );

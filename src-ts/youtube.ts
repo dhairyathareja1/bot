@@ -11,6 +11,15 @@
 
 import { Robot, Response } from "hubot";
 
+interface YoutubeSearchItem {
+  id?: { videoId?: string };
+}
+
+interface YoutubeSearchResponse {
+  items?: YoutubeSearchItem[];
+  error?: unknown;
+}
+
 export = (robot: Robot): void => {
   let resType: "respond" | "hear" = "respond";
   let trigger = /(?:youtube|yt)(?: me)? (.*)/i;
@@ -43,12 +52,12 @@ export = (robot: Robot): void => {
       })
       .get()((err, res, body) => {
       robot.logger.debug(body);
-      if (err) {
-        robot.logger.error(err);
-        robot.emit("error", err, msg);
+      if (err || !res || body == null) {
+        robot.logger.error(err || "YouTube returned an empty response");
+        robot.emit("error", err || new Error("Empty YouTube response"), msg);
         return;
       }
-      let videos: any;
+      let videos: YoutubeSearchResponse | undefined;
       try {
         if (res.statusCode === 200) {
           videos = JSON.parse(body);
@@ -62,18 +71,23 @@ export = (robot: Robot): void => {
         msg.send(`Error! ${body}`);
         return;
       }
-      if (videos.error) {
+      if (videos?.error) {
         robot.logger.error(videos.error);
         msg.send(`Error! ${JSON.stringify(videos.error)}`);
         return;
       }
-      videos = videos.items;
-      if (!videos || videos.length === 0) {
+      const items = videos?.items;
+      if (!items || items.length === 0) {
         msg.send(`No video results for "${query}"`);
         return;
       }
-      const video: any = msg.random(videos);
-      msg.send(`https://www.youtube.com/watch?v=${video.id.videoId}`);
+      const video = msg.random(items);
+      const videoId = video.id?.videoId;
+      if (!videoId) {
+        msg.send("Got a malformed result from YouTube, try again.");
+        return;
+      }
+      msg.send(`https://www.youtube.com/watch?v=${videoId}`);
     });
   };
 

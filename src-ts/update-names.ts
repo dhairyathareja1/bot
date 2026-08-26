@@ -6,58 +6,92 @@
 
 import { Robot } from "hubot";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const https = require("https");
+import * as https from "https";
+
 const token = process.env.SLACK_API_TOKEN;
 
 export = (robot: Robot): void => {
   if (!token) {
-    // console.log("No slack Api token found")
     return;
   }
 
-  let parsedUsers = 0;
-  let updatedUsers = 0;
-  let totalUsers = 0;
-  let currentRoom: string | null = null;
+  interface UpdateRun {
+    parsedUsers: number;
+    updatedUsers: number;
+    totalUsers: number;
+    room: string;
+  }
 
-  const updateName = (uid: string): void => {
+  const reportIfComplete = (run: UpdateRun): void => {
+    if (run.parsedUsers === run.totalUsers) {
+      robot.send(
+        { room: run.room },
+        `Updated names for ${run.updatedUsers} out of ${run.totalUsers} users`,
+      );
+    }
+  };
+
+  const updateName = (uid: string, run: UpdateRun): void => {
     const pre = "/api/users.info?token=";
     const post = "&user=";
-    const url = pre + token + post + uid;
+    const url = pre + encodeURIComponent(token) + post + encodeURIComponent(uid);
     let output = "";
-    https.get({ host: "slack.com", path: url }, (res: any) => {
-      res.on("data", (chunk: string) => {
+    let complete = false;
+    const completeUser = (): void => {
+      if (complete) {
+        return;
+      }
+      complete = true;
+      run.parsedUsers++;
+      reportIfComplete(run);
+    };
+    const request = https.get({ host: "slack.com", path: url }, (res) => {
+      res.on("data", (chunk) => {
         output += chunk;
       });
       res.on("end", () => {
-        parsedUsers++;
-        const data = JSON.parse("" + output);
-        if (data.ok) {
-          const user = robot.brain.userForId(data.user.id);
-          if (user.name !== data.user.name) {
-            user.name = data.user.name;
-            updatedUsers++;
+        try {
+          if (res.statusCode != null && res.statusCode >= 400) {
+            throw new Error(`Slack returned HTTP ${res.statusCode}`);
           }
+          const data = JSON.parse("" + output);
+          if (data.ok) {
+            const user = robot.brain.userForId(data.user.id);
+            if (user.name !== data.user.name) {
+              user.name = data.user.name;
+              run.updatedUsers++;
+            }
+          }
+        } catch (e) {
+          robot.logger.warning(`update-names: bad response for ${uid}: ${e}`);
         }
-        if (parsedUsers === totalUsers) {
-          robot.send(
-            { room: currentRoom },
-            `Updated names for ${updatedUsers} out of ${totalUsers} users`,
-          );
-        }
+        completeUser();
       });
+      res.on("error", (error) => {
+        robot.logger.warning(`update-names: response failed for ${uid}: ${error}`);
+        completeUser();
+      });
+    });
+    request.on("error", (error) => {
+      robot.logger.warning(`update-names: request failed for ${uid}: ${error}`);
+      completeUser();
     });
   };
 
   robot.respond(/update db/i, (msg) => {
     msg.send("Updating names in database");
-    currentRoom = msg.message.user.room || null;
-    parsedUsers = 0;
-    updatedUsers = 0;
-    totalUsers = Object.keys(robot.brain.data.users).length;
+    const run: UpdateRun = {
+      parsedUsers: 0,
+      updatedUsers: 0,
+      totalUsers: Object.keys(robot.brain.data.users).length,
+      room: msg.message.user.room || msg.message.room,
+    };
+    if (run.totalUsers === 0) {
+      reportIfComplete(run);
+      return;
+    }
     for (const key of Object.keys(robot.brain.data.users)) {
-      updateName(robot.brain.data.users[key].id);
+      updateName(robot.brain.data.users[key].id, run);
     }
   });
 };

@@ -5,10 +5,9 @@
 //   name++ or name-- : Adds/subtracts 1 point to/from user's score
 //   hubot score name : Shows current score of the user
 
-import { Robot } from "hubot";
+import { Robot, Response } from "hubot";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const util = require("./util");
+import { info } from "./util";
 
 const responses = [
   "Flamboyant!",
@@ -38,7 +37,7 @@ function parse(json: string): string[][] {
 }
 
 export = (robot: Robot): void => {
-  const getChannel = (response: any): string => {
+  const getChannel = (response: Response): string => {
     if (response.message.room === response.message.user.name) {
       return `@${response.message.room}`;
     } else {
@@ -125,6 +124,8 @@ export = (robot: Robot): void => {
     if (fieldtype === "plus") {
       field[sendername] = field[sendername] + 1 || 1;
     } else {
+      // The detailed map stores occurrence counts. detailed-score.ts turns
+      // depreciation counts into negative chart values when rendering.
       field[sendername] = field[sendername] + 1 || 1;
     }
   };
@@ -150,7 +151,7 @@ export = (robot: Robot): void => {
         field[name.toLowerCase()] = lastScore(name, field) + 1;
         const userfield = userFieldPlus(name.toLowerCase());
         updateDetailedScore(userfield, username, "plus");
-        response = responses[Math.floor(Math.random() * 7)];
+        response = responses[Math.floor(Math.random() * responses.length)];
       } else {
         response = "0";
       }
@@ -177,7 +178,11 @@ export = (robot: Robot): void => {
   };
 
   const getSlackIds = (callback: (slackIds: string[]) => void): void => {
-    util.info((body: string) => {
+    info((err, body) => {
+      if (err || body == null) {
+        robot.logger.warning(`leaderboard: could not fetch slack ids: ${err}`);
+        return;
+      }
       const slackIds: string[] = [];
       for (const user of parse(body)) {
         if (user.length >= 13 && user[10]) {
@@ -191,7 +196,7 @@ export = (robot: Robot): void => {
   // listen for any [word](++/--) in chat and react/update score
   robot.hear(/[a-zA-Z0-9\-_]+(\-\-|\+\+)/gi, (msg) => {
     // message for score update that bot will return
-    let oldmsg = msg.message.text as string;
+    let oldmsg = msg.message.text || "";
 
     // data-store object
     const ScoreField = scorefield();
@@ -258,7 +263,7 @@ export = (robot: Robot): void => {
   robot.respond(/score ([\w\-_]+)/i, (msg) => {
     // we do not want to reply in case of batch score is requested
     const fxx = /f\d\d/i;
-    if (fxx.exec(msg.match[0]) != null) {
+    if (fxx.exec(msg.match[0])) {
       return;
     }
 
@@ -269,7 +274,7 @@ export = (robot: Robot): void => {
     const name = msg.match[1].toLowerCase();
 
     // If the key exist
-    if (ScoreField[name] != null) {
+    if (ScoreField[name] !== undefined) {
       // current score for keyword
       const currentscore = ScoreField[name];
       msg.send(`${name} : ${currentscore}`);

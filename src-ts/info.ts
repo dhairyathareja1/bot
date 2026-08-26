@@ -10,12 +10,10 @@
 
 import { Robot } from "hubot";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const moment = require("moment");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const util = require("./util");
+import moment from "moment";
+import { info } from "./util";
 
-function parse(json: string, query: string): string[][] {
+function parse(json: string, query: string): string[][] | null {
   const result: string[][] = [];
   for (const line of json.toString().split("\n")) {
     const y = line.toLowerCase().indexOf(query);
@@ -23,13 +21,14 @@ function parse(json: string, query: string): string[][] {
       result.push(line.split(",").map((s) => s.trim()));
     }
   }
-  /* BUGFIX: original CoffeeScript was `if result != "" then result else false`.
-   `result` is always an array, never `!=`-equal to a string in a way that
-   resolves false, so that comparison was always true — the `else false`
-   branch never ran. parse() always returned the array (even empty), never
-   `false`, which made the `if (!result)` "not found" message below
-   unreachable. Fixed here so an empty match set now correctly reports
-   "no user found" instead of silently sending zero attachments. */
+  /* BUGFIX: original CoffeeScript ended with a dead `else false` branch
+     (`if result != "" then result else false`), so parse() always returned
+     the array — even when empty — and the callers' `if (!result)`
+     "not found" paths were unreachable. This version returns null when no
+     rows match, so those checks actually fire. */
+  if (result.length === 0) {
+    return null;
+  }
   return result;
 }
 
@@ -40,7 +39,11 @@ function randomColor(): string {
 export = (robot: Robot): void => {
   robot.respond(/(info) (.+)$/i, (msg) => {
     const query = msg.match[2].toLowerCase();
-    util.info((body: string) => {
+    info((err, body) => {
+      if (err || body == null) {
+        msg.send(`Could not fetch member data :( ${err}`);
+        return;
+      }
       const result = parse(body, query);
       if (!result) {
         msg.send("I could not find a user matching `" + query.toString() + "`");

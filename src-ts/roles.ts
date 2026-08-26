@@ -18,7 +18,7 @@ function getAmbiguousUserText(users: User[]): string {
 
 export = (robot: Robot): void => {
   if (process.env.HUBOT_AUTH_ADMIN) {
-    robot.logger.warning('The HUBOT_AUTH_ADMIN environment variable is set not going to load roles.coffee, you should delete it');
+    robot.logger.warning('The HUBOT_AUTH_ADMIN environment variable is set not going to load roles script, you should delete it');
     return;
   }
 
@@ -90,7 +90,7 @@ export = (robot: Robot): void => {
       if (users.length === 1) {
         const user = users[0];
         user.roles = user.roles || [];
-        if (msg.envelope.user.name === user.name) {
+        if (msg.envelope.user?.name === user.name) {
           msg.send('Nice try, dumbass!');
         } else if (!user.roles.includes(newRole)) {
           msg.send('I know.');

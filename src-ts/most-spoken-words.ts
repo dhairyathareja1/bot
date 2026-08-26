@@ -17,13 +17,11 @@
 
 import { Robot } from "hubot";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const cron = require("node-cron");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const natural = require("natural");
-const tokenizer = new natural.WordTokenizer();
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const util = require("./util");
+import * as cron from "node-cron";
+import { WordTokenizer } from "natural/lib/natural/tokenizers/regexp_tokenizer";
+import { graph } from "./util";
+
+const tokenizer = new WordTokenizer();
 
 const responses = [
   "Looks like you are more of a silent man",
@@ -35,8 +33,8 @@ function listOfUsersWithCount(robot: Robot): [string, number][] {
   const sorted: [string, number][] = [];
   for (const key of Object.keys(robot.brain.data.users)) {
     const user = robot.brain.data.users[key];
-    if (user.msgcount > 0) {
-      sorted.push([user.name, user.msgcount]);
+    if ((user.msgcount ?? 0) > 0) {
+      sorted.push([user.name, user.msgcount ?? 0]);
     }
   }
   if (sorted.length) {
@@ -96,9 +94,9 @@ export = (robot: Robot): void => {
     words = words.filter((val) => !excluded.includes(val.toLowerCase()));
     if (words.length > 0) {
       const name = msg.message.user.name;
-      const user: any = robot.brain.userForName(name);
-      user.msgcount = ++user.msgcount || 1;
-      if (typeof user === "object") {
+      const user = robot.brain.userForName(name);
+      if (user) {
+        user.msgcount = (user.msgcount ?? 0) + 1;
         user.words = user.words || {};
         if (Object.keys(user.words).length > 25) {
           let removalCount = 0;
@@ -106,7 +104,7 @@ export = (robot: Robot): void => {
           while (removalCount === 0) {
             i++;
             for (const word of Object.keys(user.words)) {
-              const spokenCount = user.words[word];
+              const spokenCount = user.words[word] ?? 0;
               if (spokenCount <= i) {
                 delete user.words[word];
                 removalCount++;
@@ -123,12 +121,12 @@ export = (robot: Robot): void => {
 
   robot.respond(/.*show.*words.*/i, (msg) => {
     const name = msg.message.user.name;
-    const user: any = robot.brain.userForName(name);
-    if (typeof user === "object") {
+    const user = robot.brain.userForName(name);
+    if (user) {
       const sorted: [string, number][] = [];
       user.words = user.words || {};
       for (const word of Object.keys(user.words)) {
-        sorted.push([word, user.words[word]]);
+        sorted.push([word, user.words[word] ?? 0]);
       }
       if (sorted.length) {
         sorted.sort((a, b) => b[1] - a[1]);
@@ -142,14 +140,14 @@ export = (robot: Robot): void => {
 
   robot.respond(/stats( \-\w)?/i, (msg) => {
     const sorted = listOfUsersWithCount(robot);
-    if (msg.match[1] == null) {
+    if (msg.match[1] === undefined) {
       const name = msg.message.user.name;
-      const sender: any = robot.brain.userForName(name);
+      const sender = robot.brain.userForName(name);
       let isSenderInList = false;
       let response = "```Name : Message Count\n";
       if (sorted.length) {
         for (const user of sorted) {
-          if (sender.name === user[0]) {
+          if (sender && sender.name === user[0]) {
             isSenderInList = true;
             break;
           }
@@ -189,7 +187,7 @@ export = (robot: Robot): void => {
         const data = encodeURIComponent(JSON.stringify(chart));
         const text = "Message Count";
         const alt = "Chart showing message count";
-        util.graph(data, text, alt, (reply: any) => {
+        graph(data, text, alt, (reply) => {
           msg.send({ attachments: JSON.stringify(reply) });
         });
       }
@@ -199,18 +197,20 @@ export = (robot: Robot): void => {
   // This will run every Saturday at 9 pm
   cron.schedule("0 0 21 * * Saturday", () => {
     const sorted = listOfUsersWithCount(robot);
-    const name = sorted[0][0];
-    const currMsgRecord = sorted[0][1];
-    let message = `This week's top poster is @${name}`;
-    message += ` with ${currMsgRecord} messages`;
-    robot.send({ room: "general" }, message);
-    if (currMsgRecord >= 50) {
-      robot.emit("plusplus", { username: name });
-    }
-    for (const key of Object.keys(robot.brain.data.users)) {
-      const user = robot.brain.data.users[key];
-      if (user.msgcount > 0) {
-        user.msgcount = 0;
+    if (sorted[0]) {
+      const name = sorted[0][0];
+      const currMsgRecord = sorted[0][1];
+      let message = `This week's top poster is @${name}`;
+      message += ` with ${currMsgRecord} messages`;
+      robot.send({ room: "general" }, message);
+      if (currMsgRecord >= 50) {
+        robot.emit("plusplus", { username: name });
+      }
+      for (const key of Object.keys(robot.brain.data.users)) {
+        const user = robot.brain.data.users[key];
+        if ((user.msgcount ?? 0) > 0) {
+          user.msgcount = 0;
+        }
       }
     }
   });

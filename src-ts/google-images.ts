@@ -51,6 +51,20 @@ function deprecatedImage(
   cb(ensureResult(imgUrl, animated));
 }
 
+interface GoogleImage {
+  link: string;
+}
+
+interface GoogleImageError {
+  message?: string;
+  extendedHelp?: string;
+}
+
+interface GoogleImageResponse {
+  items?: GoogleImage[];
+  error?: { errors?: GoogleImageError[] };
+}
+
 function imageMe(
   msg: Response,
   query: string,
@@ -62,13 +76,21 @@ function imageMe(
     typeof animated === "boolean" ? animated : undefined;
   let facesFlag: boolean | undefined =
     typeof faces === "boolean" ? faces : undefined;
-  let callback: ImageCallback = cb as ImageCallback;
+  // Resolve the overloaded-argument form used by the original CoffeeScript:
+  // a trailing function argument wins over the optional `cb` parameter.
+  const callback: ImageCallback | undefined =
+    typeof faces === "function"
+      ? faces
+      : typeof animated === "function"
+        ? animated
+        : cb;
+  if (!callback) {
+    throw new Error("imageMe requires a callback");
+  }
   if (typeof animated === "function") {
-    callback = animated;
     animatedFlag = undefined;
   }
   if (typeof faces === "function") {
-    callback = faces;
     facesFlag = undefined;
   }
 
@@ -83,7 +105,7 @@ function imageMe(
       msg.send("Missing server environment variable HUBOT_GOOGLE_CSE_KEY.");
       return;
     }
-    const q: { [key: string]: any } = {
+    const q: { [key: string]: string } = {
       q: query,
       searchType: "image",
       safe: process.env.HUBOT_GOOGLE_SAFE_SEARCH || "high",
@@ -101,22 +123,29 @@ function imageMe(
     }
     const url = "https://www.googleapis.com/customsearch/v1";
     msg.http(url).query(q).get()((err, res, body) => {
-      if (err) {
-        if (res.statusCode === 403) {
-          msg.send("Daily image quota exceeded, using alternate source.");
-          deprecatedImage(msg, query, animatedFlag, facesFlag, callback);
-        } else {
-          msg.send(`Encountered an error :( ${err}`);
-        }
+      if (err || !res || body == null) {
+        msg.send(`Encountered an error :( ${err || "empty response"}`);
+        return;
+      }
+      if (res.statusCode === 403) {
+        msg.send("Daily image quota exceeded, using alternate source.");
+        deprecatedImage(msg, query, animatedFlag, facesFlag, callback);
         return;
       }
       if (res.statusCode !== 200) {
         msg.send(`Bad HTTP response :( ${res.statusCode}`);
         return;
       }
-      const response = JSON.parse(body);
-      if (response && response.items) {
-        const image: any = msg.random(response.items);
+      let response: GoogleImageResponse;
+      try {
+        response = JSON.parse(body);
+      } catch (error) {
+        msg.robot.logger.error(error);
+        msg.send("Google Images returned a malformed response.");
+        return;
+      }
+      if (response && response.items && response.items.length > 0) {
+        const image = msg.random(response.items);
         callback(ensureResult(image.link, animatedFlag));
       } else {
         msg.send(`Oops. I had trouble searching '${query}'. Try later.`);

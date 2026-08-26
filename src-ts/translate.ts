@@ -99,11 +99,21 @@ export = (robot: Robot): void => {
   );
 
   robot.respond(pattern, (msg) => {
+    if (!API_KEY) {
+      msg.send(
+        "Please set the HUBOT_GOOGLE_TRANSLATE_API_KEY environment variable.",
+      );
+      return;
+    }
     const term = `"${msg.match[3]?.trim()}"`;
     const origin =
-      msg.match[1] !== undefined ? getCode(msg.match[1], languages) : "auto";
+      msg.match[1] !== undefined
+        ? (getCode(msg.match[1], languages) ?? "auto")
+        : "auto";
     const target =
-      msg.match[2] !== undefined ? getCode(msg.match[2], languages) : "en";
+      msg.match[2] !== undefined
+        ? (getCode(msg.match[2], languages) ?? "en")
+        : "en";
 
     msg
       .http("https://www.googleapis.com/language/translate/v2")
@@ -114,7 +124,7 @@ export = (robot: Robot): void => {
         q: term,
       })
       .get()((err, res, body) => {
-      if (err) {
+      if (err || body == null) {
         msg.send("Failed to connect to GAPI");
         robot.emit("error", err, res);
         return;
@@ -129,7 +139,7 @@ export = (robot: Robot): void => {
             msg.send(`${term} is ${language} for ${translated}`);
           } else {
             msg.send(
-              `The ${language} ${term} translates as ${translated} in ${languages[target as string]}`,
+              `The ${language} ${term} translates as ${translated} in ${languages[target]}`,
             );
           }
         }

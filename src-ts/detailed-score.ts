@@ -7,8 +7,7 @@
 
 import { Robot } from "hubot";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const util = require("./util");
+import { graph } from "./util";
 
 class Person {
   name: string;
@@ -45,11 +44,11 @@ function isExist(list: Person[], name: string): number {
 export = (robot: Robot): void => {
   robot.respond(/detailed score ([\w\-_]+)( \-\w)?/i, (msg) => {
     // <keyword> whose score is to be shown
-    if (msg.match[2] == null) {
+    if (msg.match[2] === undefined) {
       const name = msg.match[1].toLowerCase();
       let plusField: [string, number][] = [];
       let minusField: [string, number][] = [];
-      const detailedfield = robot.brain.get("detailedfield");
+      const detailedfield = robot.brain.get("detailedfield") || {};
       let response = "";
       if (detailedfield[name]) {
         if (detailedfield[name]["plus"]) {
@@ -75,7 +74,7 @@ export = (robot: Robot): void => {
     } else {
       if (msg.match[2] === " -b") {
         const name = msg.match[1].toLowerCase();
-        const detailedfield = robot.brain.get("detailedfield");
+        const detailedfield = robot.brain.get("detailedfield") || {};
         const list: Person[] = [];
         if (detailedfield[name]) {
           if (detailedfield[name]["plus"]) {
@@ -116,7 +115,7 @@ export = (robot: Robot): void => {
          the config — nested inside `data` it was silently ignored, so the
          chart title and the datalabels styling never actually applied.
          Fixed by moving `options` up to be a sibling of `type`/`data`.*/
-        const graph = {
+        const chartConfig = {
           type: "bar",
           data: {
             labels: nameList,
@@ -154,13 +153,13 @@ export = (robot: Robot): void => {
             },
           },
         };
-        const chart = encodeURIComponent(JSON.stringify(graph));
+        const chart = encodeURIComponent(JSON.stringify(chartConfig));
         const text = `Detailed Score of ${name}`;
-        util.graph(
+        graph(
           chart,
           text,
           "Graph Showing Detailed Score",
-          (reply: any) => {
+          (reply) => {
             msg.send({ attachments: JSON.stringify(reply) });
           },
         );

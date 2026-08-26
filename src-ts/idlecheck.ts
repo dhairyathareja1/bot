@@ -13,7 +13,7 @@
 import { Robot } from "hubot";
 
 const setTime = parseFloat(process.env.IDLE_TIME_DURATION_HOURS || "0");
-let i: ReturnType<typeof setInterval> | 0 = 0;
+let i: ReturnType<typeof setInterval> | undefined;
 const msecPerHour = 1000 * 60 * 60;
 let lastMsgTime: Date | null = null;
 // Preserved from the original — defined but never referenced there either.
@@ -25,8 +25,12 @@ const idleMsgs = [
 
 export = (robot: Robot): void => {
   const checkAndSendMsg = (): void => {
+    if (lastMsgTime === null) {
+      // Interval only fires after the first `hear` armed it; guard anyway.
+      return;
+    }
     const idleTimeHour =
-      (new Date().getTime() - (lastMsgTime as Date).getTime()) / msecPerHour;
+      (new Date().getTime() - lastMsgTime.getTime()) / msecPerHour;
     if (idleTimeHour > setTime) {
       robot.emit("send:fb-feed", "dardanaak");
     }
@@ -35,7 +39,7 @@ export = (robot: Robot): void => {
   if (setTime > 0) {
     robot.hear(/.+/i, (msg) => {
       lastMsgTime = new Date();
-      if (i) {
+      if (i !== undefined) {
         clearInterval(i);
       }
       i = setInterval(() => {

@@ -11,10 +11,9 @@
 
 import { Robot } from "hubot";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const util = require("./util");
+import { graph, info } from "./util";
 
-function stringLength(str: any): number {
+function stringLength(str: string | number): number {
   return String(str).split("").length;
 }
 
@@ -57,16 +56,18 @@ function padleft(array: string[]): string[] {
   return array;
 }
 
-function parse(json: string): string[][] {
+function parse(json: string): string[][] | null {
+  if (json.trim() === "") {
+    return null;
+  }
   const result: string[][] = [];
   for (const line of json.toString().split("\n")) {
     result.push(line.split(",").map((s) => s.trim()));
   }
-  /* BUGFIX: see info.ts — original always returned the array, never `false`,
-   due to a dead `else false` branch in the source CoffeeScript. Lower
-   practical impact here since this parse() never filters by query (so an
-   empty result was already rare), but fixed for consistency with the
-   other four files sharing this exact helper pattern.*/
+  /* BUGFIX: see info.ts — the original CoffeeScript's dead `else false`
+     branch meant parse() always returned the array, making the caller's
+     `if (!result)` early-return unreachable. Returning null on an empty
+     sheet restores that guard. */
   return result;
 }
 
@@ -113,28 +114,37 @@ export = (robot: Robot): void => {
     const batch = msg.match[1];
     const year = relativeYear - Number(batch);
 
-    util.info((body: string) => {
+    info((err, body) => {
+      if (err || body == null) {
+        robot.logger.warning(
+          `batch-score: could not fetch member data: ${err}`,
+        );
+        return;
+      }
       const result = parse(body);
       if (!result) {
         return;
       }
       member(result, year, ([userNameIn, slackIdIn]) => {
         let userName: string[] = userNameIn;
-        let slackId: any[] = slackIdIn;
+        // string[] normally, but a "Score" header string is prepended below.
+        let slackId: Array<string | string[]> = slackIdIn;
         const userScore: (string | number)[] = [];
 
-        if (msg.match[2] == null) {
+        if (msg.match[2] === undefined) {
           userName = ["```Name", ...userName];
           slackId = ["Score", ...slackId];
           for (let i = 1; i <= slackId.length - 1; i++) {
-            userScore[i] = scoreField[slackId[i]] || 0;
+            // entries may be bare strings or single-element [id] arrays;
+            // object-key coercion makes both behave identically.
+            userScore[i] = scoreField[String(slackId[i])] || 0;
           }
 
           userName = padright(userName);
           const paddedScore = padleft(userScore.map((v) => String(v)));
 
           const sorted: [string, string][] = [];
-          sorted.push([userName[0], slackId[0]]);
+          sorted.push([userName[0], String(slackId[0])]);
           for (let i = 1; i <= userName.length - 1; i++) {
             sorted.push([userName[i], paddedScore[i]]);
           }
@@ -160,7 +170,7 @@ export = (robot: Robot): void => {
 
           const scores: number[] = [];
           for (let i = 0; i <= slackId.length - 1; i++) {
-            scores[i] = scoreField[slackId[i]] || 0;
+            scores[i] = scoreField[String(slackId[i])] || 0;
           }
 
           const chart = {
@@ -186,7 +196,7 @@ export = (robot: Robot): void => {
           const data = encodeURIComponent(JSON.stringify(chart));
           const text = `Batch${batch} score`;
           const alt = `Chart showing score of batch${batch}`;
-          util.graph(data, text, alt, (reply: any) => {
+          graph(data, text, alt, (reply) => {
             msg.send({ attachments: JSON.stringify(reply) });
           });
         }

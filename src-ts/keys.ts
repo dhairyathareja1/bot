@@ -40,7 +40,11 @@ export = (robot: Robot): void => {
     const user = robot.brain.userForName(name);
     try {
       const kh = key();
-      if (typeof user === "object") {
+      /* BUGFIX: the CoffeeScript used `typeof user is 'object'`, which is
+         also true for null. A real existence check preserves the intent
+         (sender is always a known user, so behavior is unchanged in
+         practice) without treating a failed lookup as success. */
+      if (user != null) {
         msg.send(`Okay ${name} has keys`);
         kh.push({ holder: name, owner: ownerName });
       }
@@ -57,7 +61,9 @@ export = (robot: Robot): void => {
       const user = robot.brain.userForName(name);
       const kh = key();
       let check = 0;
-      for (const x of kh) {
+      // Iterate over a snapshot because matching entries are removed from kh.
+      // Iterating kh directly skips adjacent entries after splice().
+      for (const x of [...kh]) {
         if (x.holder === name) {
           const index = kh.indexOf(x);
           const owner = x.owner;
@@ -68,7 +74,11 @@ export = (robot: Robot): void => {
           );
         }
       }
-      if (typeof user === "object") {
+      /* NOTE: the original CoffeeScript referenced an undeclared `user`
+         here, so `typeof user is 'object'` was always false and this
+         message was unreachable dead code. The lookup below revives it
+         as clearly intended; the null check keeps it honest. */
+      if (user != null) {
         if (check === 0) {
           msg.send("Yes , i know buddy");
         }
@@ -116,7 +126,12 @@ export = (robot: Robot): void => {
                 `Okay, so now the key of ${userso[0].name} are with ${users[0].name}`,
               );
             } else if (userso.length > 1) {
-              msg.send(getAmbiguousUserText(users));
+              /* BUGFIX: the CoffeeScript tested `users.length > 1` here
+                 (dead code inside the `users.length is 1` arm). The TS
+                 port corrected the condition to `userso.length > 1` but
+                 originally still passed `users`; the ambiguous list must
+                 be the OWNER candidates (`userso`). */
+              msg.send(getAmbiguousUserText(userso));
             } else {
               msg.send(`${ownerName}? Never heard of 'em`);
             }
@@ -146,7 +161,7 @@ export = (robot: Robot): void => {
         );
       } else {
         const users = robot.brain.usersForFuzzyName(othername);
-        if (users === null) {
+        if (users.length === 0) {
           msg.send(`I don't know anyone by the name ${othername}`);
         } else {
           let check = 0;
@@ -187,7 +202,6 @@ export = (robot: Robot): void => {
           list.push(`${x.owner}'s key are with ${x.holder}`);
         }
         let msgText = list.join("\n");
-        msgText += "";
         if (msgText === "") {
           msg.send(
             "Ah! Nobody informed me about the keys. Don't hold me responsible for this :expressionless:",

@@ -9,14 +9,11 @@
 
 import { Robot } from "hubot";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const moment = require("moment");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const cron = require("node-cron");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const util = require("./util");
+import moment from "moment";
+import * as cron from "node-cron";
+import { info } from "./util";
 
-function parse(json: string, query: string): string[][] {
+function parse(json: string, query: string): string[][] | null {
   const result: string[][] = [];
   for (const line of json.toString().split("\n")) {
     const y = line.toLowerCase().indexOf(query);
@@ -24,17 +21,25 @@ function parse(json: string, query: string): string[][] {
       result.push(line.split(",").map((s) => s.trim()));
     }
   }
-  /* BUGFIX: see info.ts — original always returned the array, never `false`,
-   due to a dead `else false` branch in the source CoffeeScript. Fixed so
-   the "not found" message and the cron job's early-return both actually
-   trigger on an empty result instead of being unreachable.*/
+  /* BUGFIX: see info.ts — the original CoffeeScript's dead `else false`
+     branch meant parse() always returned the array and the callers'
+     `if (!result)` checks were unreachable. Returning null on an empty
+     match set makes those checks live: the "not found" message and the
+     cron job's early-return now actually trigger. */
+  if (result.length === 0) {
+    return null;
+  }
   return result;
 }
 
 export = (robot: Robot): void => {
   robot.respond(/(birthday) (.+)$/i, (msg) => {
     const query = msg.match[2].toLowerCase();
-    util.info((body: string) => {
+    info((err, body) => {
+      if (err || body == null) {
+        msg.send(`Could not fetch member data :( ${err}`);
+        return;
+      }
       const result = parse(body, query);
       if (!result) {
         msg.send("I could not find a user matching `" + query.toString() + "`");
@@ -57,7 +62,11 @@ export = (robot: Robot): void => {
 
   // This will run every day at 00:00:05
   cron.schedule("5 0 0 * * *", () => {
-    util.info((body: string) => {
+    info((err, body) => {
+      if (err || body == null) {
+        robot.logger.warning(`birthday: could not fetch member data: ${err}`);
+        return;
+      }
       const result = parse(body, "/");
       if (!result) {
         return;

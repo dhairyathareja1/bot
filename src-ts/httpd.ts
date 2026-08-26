@@ -19,10 +19,28 @@
 
 import { Robot } from "hubot";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const spawn = require("child_process").spawn;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const util = require("./util");
+import { spawn } from "child_process";
+import { info } from "./util";
+
+interface DialogflowItem {
+  simpleResponse?: { textToSpeech: string };
+  basicCard?: { formattedText: string; title: string };
+  carouselBrowse?: {
+    items: Array<{ description: string; title: string; openUrlAction: { url: string } }>;
+  };
+}
+
+interface DialogflowResponse {
+  fulfillmentText: string;
+  fulfillmentMessages: unknown[];
+  source: string;
+  payload: {
+    google: {
+      expectUserResponse: boolean;
+      richResponse: { items: DialogflowItem[] };
+    };
+  };
+}
 
 function parse(json: string, query: string): string[][] {
   const result: string[][] = [];
@@ -59,16 +77,42 @@ export = (robot: Robot): void => {
       "echo I\\'m $LOGNAME@$(hostname):$(pwd) \\($(git rev-parse HEAD)\\)",
     ]);
 
+    let output = "";
+    let stderr = "";
     child.stdout.on("data", (data: Buffer) => {
+      output += data.toString();
+    });
+    child.stderr.on("data", (data: Buffer) => {
+      stderr += data.toString();
+    });
+    child.on("error", (error) => {
+      if (!res.finished) {
+        res.statusCode = 500;
+        res.end(`Unable to inspect process: ${error.message}`);
+      }
+    });
+    child.on("close", (code) => {
+      if (res.finished) {
+        return;
+      }
+      if (code !== 0) {
+        res.statusCode = 500;
+        res.end(`Unable to inspect process: ${stderr.trim()}`);
+        return;
+      }
       res.end(
-        `${data.toString().trim()} running node ${process.version} [pid: ${process.pid}]`,
+        `${output.trim()} running node ${process.version} [pid: ${process.pid}]`,
       );
-      child.stdin.end();
     });
   });
 
   robot.router.get("/hubot/ip", (req, res) => {
     robot.http("http://ifconfig.me/ip").get()((err, r, body) => {
+      if (err || !r || body == null) {
+        res.statusCode = 502;
+        res.end("Unable to determine public IP");
+        return;
+      }
       res.end(body);
     });
   });
@@ -76,20 +120,54 @@ export = (robot: Robot): void => {
   robot.router.post("/hubot/slack", (request, response) => {
     const check = process.env.HUBOT_ENV_AUTH_TOKEN;
 
-    if (request.headers.authorization === check) {
+    /* SECURITY FIX: the original compared with plain `===`, so when the
+       token env var was unset AND no Authorization header was sent,
+       `undefined === undefined` authenticated the request. Fail closed
+       instead: no configured token means always unauthorized. */
+    if (check && request.headers.authorization === check) {
       const data = request.body;
-      let responseobj: any = {};
-      if (data.queryResult.parameters.name === "") {
-        console.log(data.queryResult.parameters.any);
+      const parameters = data?.queryResult?.parameters;
+      if (!parameters || typeof parameters.name !== "string") {
+        response.writeHead(400, { "Content-Type": "application/json" });
+        response.end(JSON.stringify({ error: "invalid Dialogflow payload" }));
+        return;
+      }
+      let responseobj: DialogflowResponse;
+      if (parameters.name === "") {
         robot.send(
           { room: "general" },
-          `Announcement : '${data.queryResult.parameters.any}'`,
+          `Announcement : '${parameters.any}'`,
         );
+        responseobj = {
+          fulfillmentText: "Announcement sent",
+          fulfillmentMessages: [],
+          source: " ",
+          payload: {
+            google: {
+              expectUserResponse: false,
+              richResponse: {
+                items: [
+                  {
+                    simpleResponse: { textToSpeech: "Announcement sent" },
+                  },
+                ],
+              },
+            },
+          },
+        };
+        response.writeHead(200, { "Content-Type": "application/json" });
+        response.end(JSON.stringify(responseobj));
       } else {
-        const query = data.queryResult.parameters.name.toLowerCase();
-        util.info((body: string) => {
+        const query = parameters.name.toLowerCase();
+        info((err, body) => {
+          if (err || body == null) {
+            response.writeHead(500, { "Content-Type": "application/json" });
+            response.end(
+              JSON.stringify({ error: "could not fetch member data" }),
+            );
+            return;
+          }
           const results = parse(body, query);
-          console.log(results.length);
           if (results.length === 0) {
             responseobj = {
               fulfillmentText: "This is a text response",
@@ -201,7 +279,6 @@ export = (robot: Robot): void => {
               };
             }
           }
-          console.log(responseobj);
           response.writeHead(200, {
             "Content-Type": "application/json",
           });
@@ -209,8 +286,9 @@ export = (robot: Robot): void => {
         });
       }
     } else {
-      console.log("unauthorized request");
-      response.writeHead(404);
+      robot.logger.warning("httpd: unauthorized /hubot/slack request");
+      response.writeHead(401);
+      response.end();
     }
   });
 };

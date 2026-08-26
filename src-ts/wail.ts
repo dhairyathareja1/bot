@@ -14,7 +14,12 @@ import { Robot } from "hubot";
 
 export = (robot: Robot): void => {
   robot.respond(/who.*lab/i, (msg) => {
-    const wailUrl = `${process.env.WAIL_PIC_URL}?t=${new Date().getTime()}`;
+    const baseUrl = process.env.WAIL_PIC_URL;
+    if (!baseUrl) {
+      msg.send("WAIL_PIC_URL is not configured.");
+      return;
+    }
+    const wailUrl = `${baseUrl}?t=${new Date().getTime()}`;
     msg.send({
       attachments: [
         {

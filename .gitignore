@@ -4,7 +4,6 @@ node_modules
 .env
 data
 .idea
-package-lock.json
 .npm/
 .node-gyp/
 .log
@@ -12,3 +11,7 @@ data/
 .config/
 .bash_history
 .DS_Store
+# compiled TypeScript output (built via npm run build)
+scripts/*.js
+scripts/*.js.map
+MIGRATION-FIXES.md

@@ -7,7 +7,7 @@
 // Events:
 //   debug - {user: <user object to send message to>}
 
-import { Robot } from "hubot";
+import { Robot, User } from "hubot";
 import * as util from "util";
 
 export = (robot: Robot): void => {
@@ -16,7 +16,7 @@ export = (robot: Robot): void => {
     robot.emit(msg.match[1], { user: msg.message.user });
   });
 
-  robot.on("debug", (event: { user: any }) => {
+  robot.on("debug", (event: { user: User }) => {
     robot.send(event.user, util.inspect(event));
   });
 };

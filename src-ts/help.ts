@@ -60,7 +60,10 @@ export = (robot: Robot): void => {
     const filter = msg.match[1];
 
     if (filter) {
-      cmds = cmds.filter((cmd) => cmd.match(new RegExp(filter, "i")));
+      const normalizedFilter = filter.toLowerCase();
+      cmds = cmds.filter((cmd) =>
+        cmd.toLowerCase().includes(normalizedFilter),
+      );
       if (cmds.length === 0) {
         msg.send(`No available commands match ${filter}`);
         return;
@@ -70,7 +73,9 @@ export = (robot: Robot): void => {
     const prefix = robot.alias || robot.name;
     cmds = cmds.map((cmd) => {
       const replaced = cmd.replace(/hubot/gi, robot.name);
-      return replaced.replace(new RegExp(`^${robot.name}`), prefix);
+      return replaced.startsWith(robot.name)
+        ? prefix + replaced.slice(robot.name.length)
+        : replaced;
     });
 
     const emit = cmds.join("\n");

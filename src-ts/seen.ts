@@ -10,36 +10,26 @@
 
 import { Robot, Response } from "hubot";
 
+import timeago from "node-time-ago";
+
 const config = {
   use_timeago: process.env.HUBOT_SEEN_TIMEAGO !== "false",
 };
 
-function clean(thing: string | undefined): string {
+function clean(thing: string | undefined | false): string {
   return (thing || "").toLowerCase().trim();
 }
 
 function isPm(msg: Response): boolean {
-  try {
-    return !!(msg.message.user as any).pm;
-  } catch (error) {
-    return false;
-  }
+  return !!msg.message.user.pm;
 }
 
-function ircname(msg: Response): string | false {
-  try {
-    return msg.message.user.name;
-  } catch (error) {
-    return false;
-  }
+function ircname(msg: Response): string {
+  return msg.message.user.name;
 }
 
-function ircchan(msg: Response): string | false {
-  try {
-    return (msg.message.user as any).room;
-  } catch (error) {
-    return false;
-  }
+function ircchan(msg: Response): string | undefined {
+  return msg.message.user.room;
 }
 
 interface SeenEntry {
@@ -98,9 +88,9 @@ export = (robot: Robot): void => {
   robot.hear(/.*/, (msg) => {
     if (!isPm(msg)) {
       seen.add(
-        ircname(msg) as string,
-        ircchan(msg) as string,
-        msg.message.text as string,
+        clean(ircname(msg)),
+        ircchan(msg) || "",
+        msg.message.text || "",
       );
     }
   });
@@ -116,8 +106,6 @@ export = (robot: Robot): void => {
       if (last.date) {
         let dateString: string;
         if (config.use_timeago) {
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          const timeago = require("node-time-ago");
           dateString = timeago(new Date(last.date));
         } else {
           dateString = `at ${new Date(last.date)}`;
