@@ -15,30 +15,33 @@
     "url": "https://github.com/sdsmdg/hubot.git"
   },
   "dependencies": {
+    "@types/node": "^8.10.66",
     "follow-redirects": "^1.0.0",
+    "htmlparser": "1.7.7",
     "hubot": "^2.19.0",
     "hubot-env": "0.0.2",
     "hubot-redis-brain": "0.0.3",
     "hubot-scripts": "^2.17.2",
     "hubot-slack": "^4.3.4",
-    "libxmljs": "^0.19.10",
     "moment": "^2.18.1",
     "natural": "^0.5.0",
     "node-cron": "^1.1.2",
-    "node-gyp": "^9.3.1",
     "node-time-ago": "^1.0.0",
-    "nodemon": "2.0.19",
-    "soupselect": "^0.2.0"
+    "soupselect": "^0.2.0",
+    "typescript": "4.9.5"
   },
   "engines": {
-    "node": "^8.10.0",
-    "npm": "^3.5.2"
+    "node": ">=8.10.0 <9",
+    "npm": ">=3.5.2"
   },
   "scripts": {
-    "start": "nodemon -e coffee --exec './bin/hubot -n $HUBOT_NAME -a slack'"
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node test/migration-regressions.js && node test/launcher-regressions.js",
+    "start": "./bin/hubot -n ${HUBOT_NAME:-bot} -a slack",
+    "dev": "nodemon --watch src-ts --ext ts --exec \"npm run build && ./node_modules/.bin/hubot -n bot -a shell\""
   },
   "devDependencies": {
-    "cross-env": "^7.0.3",
     "nodemon": "^2.0.19"
   }
 }
