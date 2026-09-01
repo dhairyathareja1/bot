@@ -43,4 +43,4 @@ USER node
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "exec ./bin/hubot -n \"${HUBOT_NAME:-bot}\" -a slack"]
+CMD ["sh", "-c", "exec ./node_modules/.bin/hubot -n \"${HUBOT_NAME:-bot}\" -a slack"]
